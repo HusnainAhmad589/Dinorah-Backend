@@ -6,6 +6,7 @@ import categoryRoutes from "./routes/category.routes";
 import insightsRoutes from "./routes/insights.routes";
 import activityRoutes from "./routes/activity.routes";
 import cartRoutes from "./routes/cart.routes";
+import orderRoutes, { adminOrderRouter } from "./routes/order.routes";
 import { errorHandler } from "./middleware/error.middleware";
 
 export function createApp(): Application {
@@ -29,6 +30,10 @@ export function createApp(): Application {
 
   // Cart Routes (Sprint 3)
   app.use("/api/cart", cartRoutes);
+
+  // Orders Routes (Sprint 4: Customer & Admin)
+  app.use("/api/orders", orderRoutes);
+  app.use("/api/admin/orders", adminOrderRouter);
 
   // Products & Categories Routes
   app.use("/api", productRoutes);

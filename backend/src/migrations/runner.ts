@@ -95,21 +95,49 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 5. Create Orders Table
+    // 5. Create Orders Table (Sprint 4)
     await connection.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NULL,
         status ENUM('pending', 'confirmed', 'shipped', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
         total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+        customer_name VARCHAR(255) NULL,
+        customer_email VARCHAR(255) NULL,
+        customer_phone VARCHAR(50) NULL,
         shipping_address TEXT,
+        city VARCHAR(100) NULL,
+        postal_code VARCHAR(50) NULL,
+        payment_method VARCHAR(50) NOT NULL DEFAULT 'cod',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
         INDEX idx_status (status),
-        INDEX idx_created (created_at)
+        INDEX idx_created (created_at),
+        INDEX idx_user_id (user_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Ensure Sprint 4 checkout columns exist on orders if table was created previously
+    const orderColumnsToAdd = [
+      { name: "customer_name", sql: "ALTER TABLE orders ADD COLUMN customer_name VARCHAR(255) NULL AFTER total_amount" },
+      { name: "customer_email", sql: "ALTER TABLE orders ADD COLUMN customer_email VARCHAR(255) NULL AFTER customer_name" },
+      { name: "customer_phone", sql: "ALTER TABLE orders ADD COLUMN customer_phone VARCHAR(50) NULL AFTER customer_email" },
+      { name: "city", sql: "ALTER TABLE orders ADD COLUMN city VARCHAR(100) NULL AFTER shipping_address" },
+      { name: "postal_code", sql: "ALTER TABLE orders ADD COLUMN postal_code VARCHAR(50) NULL AFTER city" },
+      { name: "payment_method", sql: "ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) NOT NULL DEFAULT 'cod' AFTER postal_code" },
+    ];
+
+    for (const col of orderColumnsToAdd) {
+      try {
+        const [cols] = await connection.query<any[]>(`SHOW COLUMNS FROM orders LIKE '${col.name}'`);
+        if (cols.length === 0) {
+          await connection.query(col.sql);
+        }
+      } catch (e) {
+        // Ignore if column already exists
+      }
+    }
 
     // 6. Create Order Items Table
     await connection.query(`
